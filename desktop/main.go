@@ -150,7 +150,7 @@ func main() {
 		zoomFactor = zf
 	}
 
-	err := wails.Run(&options.App{
+	err = wails.Run(&options.App{
 		Title:     "Reasonix",
 		Width:     width,
 		Height:    height,
