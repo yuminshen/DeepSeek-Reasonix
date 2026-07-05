@@ -92,6 +92,9 @@ func MigrateLegacyIfNeeded() (*MigrationResult, error) {
 }
 
 func MigrateLegacyIfNeededForRoot(root string) (*MigrationResult, error) {
+	if runtimeHomeDir() != "" {
+		return nil, nil
+	}
 	credErr := migrateLegacyCredentialsIfNeededForRoot(root)
 	dest := userConfigPath()
 	if dest == "" {
@@ -168,6 +171,9 @@ func MigrateLegacyIfNeededForRoot(root string) (*MigrationResult, error) {
 }
 
 func MigrateLegacyCredentialsForRoot(root string) error {
+	if runtimeHomeDir() != "" {
+		return nil
+	}
 	return migrateLegacyCredentialsIfNeededForRoot(root)
 }
 
@@ -177,6 +183,9 @@ func MigrateLegacyCredentialsForRoot(root string) error {
 // settings page is stable across Global/project tabs. Existing global entries win
 // on name collisions, and source files are left untouched.
 func MigrateMCPToUserConfigOnUpgrade(projectRoots []string) (*MCPGlobalMigrationResult, error) {
+	if runtimeHomeDir() != "" {
+		return nil, nil
+	}
 	marker := mcpGlobalMigrationMarkerPath()
 	if marker == "" {
 		return nil, nil

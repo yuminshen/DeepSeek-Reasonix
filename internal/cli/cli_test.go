@@ -425,6 +425,35 @@ command = "legacy-bin"
 	}
 }
 
+func TestApplyRuntimeHomeArgSetsEnvAndStripsFlag(t *testing.T) {
+	t.Setenv("REASONIX_RUNTIME_HOME", "")
+	dir := filepath.Join(t.TempDir(), "runtime")
+	args, err := applyRuntimeHomeArg([]string{"--runtime-home", dir, "chat", "--model", "deepseek"})
+	if err != nil {
+		t.Fatalf("applyRuntimeHomeArg: %v", err)
+	}
+	if got := os.Getenv("REASONIX_RUNTIME_HOME"); got != dir {
+		t.Fatalf("REASONIX_RUNTIME_HOME = %q, want %q", got, dir)
+	}
+	want := []string{"chat", "--model", "deepseek"}
+	if !reflect.DeepEqual(args, want) {
+		t.Fatalf("args = %#v, want %#v", args, want)
+	}
+
+	other := filepath.Join(t.TempDir(), "other")
+	args, err = applyRuntimeHomeArg([]string{"run", "--runtime-home=" + other})
+	if err != nil {
+		t.Fatalf("applyRuntimeHomeArg inline: %v", err)
+	}
+	if got := os.Getenv("REASONIX_RUNTIME_HOME"); got != other {
+		t.Fatalf("inline REASONIX_RUNTIME_HOME = %q, want %q", got, other)
+	}
+	want = []string{"run"}
+	if !reflect.DeepEqual(args, want) {
+		t.Fatalf("inline args = %#v, want %#v", args, want)
+	}
+}
+
 func TestRunMetadataCommandsDoNotMigrateLegacyConfig(t *testing.T) {
 	isolateCLIConfigHome(t)
 	legacyPath := filepath.Join(filepath.Dir(config.UserConfigPath()), "reasonix.toml")

@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
@@ -26,6 +27,34 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)
+}
+
+func TestApplyDesktopRuntimeHomeArgSetsEnvAndStripsFlag(t *testing.T) {
+	t.Setenv("REASONIX_RUNTIME_HOME", "")
+	dir := filepath.Join(t.TempDir(), "runtime")
+	args, err := applyDesktopRuntimeHomeArg([]string{"--runtime-home=" + dir, "--foo"})
+	if err != nil {
+		t.Fatalf("applyDesktopRuntimeHomeArg: %v", err)
+	}
+	if got := os.Getenv("REASONIX_RUNTIME_HOME"); got != dir {
+		t.Fatalf("REASONIX_RUNTIME_HOME = %q, want %q", got, dir)
+	}
+	if want := []string{"--foo"}; !reflect.DeepEqual(args, want) {
+		t.Fatalf("args = %#v, want %#v", args, want)
+	}
+
+	other := filepath.Join(t.TempDir(), "other")
+	args, err = applyDesktopRuntimeHomeArg([]string{"--runtime-home", other, "--", "--runtime-home", "ignored"})
+	if err != nil {
+		t.Fatalf("applyDesktopRuntimeHomeArg split: %v", err)
+	}
+	if got := os.Getenv("REASONIX_RUNTIME_HOME"); got != other {
+		t.Fatalf("split REASONIX_RUNTIME_HOME = %q, want %q", got, other)
+	}
+	want := []string{"--", "--runtime-home", "ignored"}
+	if !reflect.DeepEqual(args, want) {
+		t.Fatalf("split args = %#v, want %#v", args, want)
+	}
 }
 
 func TestWindowsWebview2GPUDisabled(t *testing.T) {

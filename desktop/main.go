@@ -8,6 +8,7 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"os"
 	"path/filepath"
 	goruntime "runtime"
@@ -19,6 +20,8 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
+
+	"reasonix/internal/config"
 
 	// Blank imports wire compile-time built-ins into their registries, exactly as
 	// cmd/reasonix does — boot.Build resolves providers/tools from these registries.
@@ -89,7 +92,45 @@ func linuxWebviewGpuPolicy(pattern string) linux.WebviewGpuPolicy {
 	return linux.WebviewGpuPolicyNever
 }
 
+func applyDesktopRuntimeHomeArg(args []string) ([]string, error) {
+	out := make([]string, 0, len(args))
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			out = append(out, args[i:]...)
+			break
+		}
+		if arg == "--runtime-home" {
+			if i+1 >= len(args) || strings.TrimSpace(args[i+1]) == "" {
+				return nil, fmt.Errorf("--runtime-home requires a directory")
+			}
+			if err := config.SetRuntimeHome(args[i+1]); err != nil {
+				return nil, err
+			}
+			i++
+			continue
+		}
+		if value, ok := strings.CutPrefix(arg, "--runtime-home="); ok {
+			if strings.TrimSpace(value) == "" {
+				return nil, fmt.Errorf("--runtime-home requires a directory")
+			}
+			if err := config.SetRuntimeHome(value); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		out = append(out, arg)
+	}
+	return out, nil
+}
+
 func main() {
+	args, err := applyDesktopRuntimeHomeArg(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
+	os.Args = append(os.Args[:1], args...)
 	app := NewApp()
 
 	// Restore saved window size, or fall back to the default.

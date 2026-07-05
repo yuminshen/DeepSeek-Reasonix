@@ -45,6 +45,13 @@ var (
 
 // Run is the CLI entry point; it returns a process exit code.
 func Run(args []string, version string) int {
+	var runtimeHomeFlagErr error
+	args, runtimeHomeFlagErr = applyRuntimeHomeArg(args)
+	if runtimeHomeFlagErr != nil {
+		fmt.Fprintln(os.Stderr, runtimeHomeFlagErr)
+		return 2
+	}
+
 	// Pick the UI language up front so even pre-config paths (the first-run
 	// welcome banner) come through localized. Env-only first; if a config
 	// exists and pins a language, that wins.
@@ -132,6 +139,41 @@ func Run(args []string, version string) int {
 		usage()
 		return 2
 	}
+}
+
+func applyRuntimeHomeArg(args []string) ([]string, error) {
+	if len(args) == 0 {
+		return args, nil
+	}
+	out := make([]string, 0, len(args))
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			out = append(out, args[i:]...)
+			break
+		}
+		if arg == "--runtime-home" {
+			if i+1 >= len(args) || strings.TrimSpace(args[i+1]) == "" {
+				return nil, fmt.Errorf("--runtime-home requires a directory")
+			}
+			if err := config.SetRuntimeHome(args[i+1]); err != nil {
+				return nil, fmt.Errorf("set --runtime-home: %w", err)
+			}
+			i++
+			continue
+		}
+		if value, ok := strings.CutPrefix(arg, "--runtime-home="); ok {
+			if strings.TrimSpace(value) == "" {
+				return nil, fmt.Errorf("--runtime-home requires a directory")
+			}
+			if err := config.SetRuntimeHome(value); err != nil {
+				return nil, fmt.Errorf("set --runtime-home: %w", err)
+			}
+			continue
+		}
+		out = append(out, arg)
+	}
+	return out, nil
 }
 
 func isDefaultInteractiveFlag(arg string) bool {

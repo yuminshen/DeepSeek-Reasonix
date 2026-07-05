@@ -62,6 +62,76 @@ func TestUserConfigPathHonorsReasonixHome(t *testing.T) {
 	}
 }
 
+func TestRuntimeHomeOverridesConfigStateAndCache(t *testing.T) {
+	home := isolateUserConfigHome(t)
+	runtimeRoot := filepath.Join(home, "runtime")
+	t.Setenv("REASONIX_HOME", "")
+	t.Setenv("REASONIX_STATE_HOME", "")
+	t.Setenv("REASONIX_CACHE_HOME", "")
+	t.Setenv("REASONIX_RUNTIME_HOME", runtimeRoot)
+
+	want := map[string]string{
+		"config":      filepath.Join(runtimeRoot, "home", "config.toml"),
+		"credentials": filepath.Join(runtimeRoot, "state", ".env"),
+		"sessions":    filepath.Join(runtimeRoot, "state", "sessions"),
+		"cache":       filepath.Join(runtimeRoot, "cache"),
+	}
+	got := map[string]string{
+		"config":      UserConfigPath(),
+		"credentials": UserCredentialsPath(),
+		"sessions":    SessionDir(),
+		"cache":       CacheDir(),
+	}
+	for name, path := range got {
+		if filepath.Clean(path) != filepath.Clean(want[name]) {
+			t.Fatalf("%s path = %q, want %q", name, path, want[name])
+		}
+	}
+
+	legacy := filepath.Join(home, ".config", "reasonix", "config.toml")
+	if runtime.GOOS == "windows" {
+		legacy = filepath.Join(home, "AppData", "Roaming", "reasonix", "config.toml")
+	}
+	if err := os.MkdirAll(filepath.Dir(legacy), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(legacy, []byte(`default_model = "legacy/provider"`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	legacyJSON := filepath.Join(home, ".reasonix", "config.json")
+	if err := os.MkdirAll(filepath.Dir(legacyJSON), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(legacyJSON, []byte(`{"mcpServers":{"legacy":{"command":"legacy-bin"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if source := SourcePath(); source != "" {
+		t.Fatalf("SourcePath() = %q, want no legacy fallback in runtime home mode", source)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	for _, plugin := range cfg.Plugins {
+		if plugin.Name == "legacy" {
+			t.Fatalf("Load used legacy config.json MCP in runtime home mode: %+v", cfg.Plugins)
+		}
+	}
+
+	t.Setenv("REASONIX_HOME", filepath.Join(home, "config-root"))
+	t.Setenv("REASONIX_STATE_HOME", filepath.Join(home, "state-root"))
+	t.Setenv("REASONIX_CACHE_HOME", filepath.Join(home, "cache-root"))
+	if got, want := UserConfigPath(), filepath.Join(home, "config-root", "config.toml"); filepath.Clean(got) != filepath.Clean(want) {
+		t.Fatalf("specific REASONIX_HOME path = %q, want %q", got, want)
+	}
+	if got, want := SessionDir(), filepath.Join(home, "state-root", "sessions"); filepath.Clean(got) != filepath.Clean(want) {
+		t.Fatalf("specific REASONIX_STATE_HOME path = %q, want %q", got, want)
+	}
+	if got, want := CacheDir(), filepath.Join(home, "cache-root"); filepath.Clean(got) != filepath.Clean(want) {
+		t.Fatalf("specific REASONIX_CACHE_HOME path = %q, want %q", got, want)
+	}
+}
+
 func TestLoadForRootUsesWindowsHomeFallbackWhenConfigDirUnavailable(t *testing.T) {
 	home := t.TempDir()
 	project := t.TempDir()

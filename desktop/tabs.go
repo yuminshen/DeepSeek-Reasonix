@@ -3562,6 +3562,9 @@ func singleSurfaceTabsFile(f desktopTabsFile) desktopTabsFile {
 }
 
 func desktopConfigDir() string {
+	if dir := config.MemoryUserDir(); dir != "" {
+		return dir
+	}
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		home, _ := os.UserHomeDir()
@@ -6617,12 +6620,10 @@ func newTopicID() string {
 }
 
 func globalWorkspaceRoot() string {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		home, _ := os.UserHomeDir()
-		return filepath.Join(home, ".reasonix", "global-workspace")
+	if dir := config.MemoryUserDir(); dir != "" {
+		return filepath.Join(dir, "global-workspace")
 	}
-	return filepath.Join(dir, "reasonix", "global-workspace")
+	return filepath.Join(desktopConfigDir(), "global-workspace")
 }
 
 func ensureGlobalWorkspaceRoot() (string, error) {

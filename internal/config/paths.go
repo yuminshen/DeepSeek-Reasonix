@@ -31,9 +31,16 @@ func userConfigDir() string {
 	return reasonixHomeDir()
 }
 
+func runtimeHomeDir() string {
+	return cleanEnvDir("REASONIX_RUNTIME_HOME")
+}
+
 func reasonixHomeDir() string {
 	if dir := cleanEnvDir("REASONIX_HOME"); dir != "" {
 		return dir
+	}
+	if dir := runtimeHomeDir(); dir != "" {
+		return filepath.Join(dir, "home")
 	}
 	if runtimeGOOS == "windows" {
 		if dir := osUserConfigDir(); dir != "" {
@@ -78,6 +85,9 @@ func userConfigLoadPath() string {
 }
 
 func legacyUserConfigPath() string {
+	if runtimeHomeDir() != "" {
+		return ""
+	}
 	dir := legacyOSSupportDir()
 	if dir == "" {
 		return ""
@@ -102,7 +112,7 @@ func userConfigCandidatePaths() []string {
 }
 
 func legacyXDGConfigPaths() []string {
-	if runtimeGOOS == "windows" {
+	if runtimeHomeDir() != "" || runtimeGOOS == "windows" {
 		return nil
 	}
 	seen := map[string]bool{}
@@ -131,10 +141,16 @@ func userSupportDir() string {
 	if dir := cleanEnvDir("REASONIX_STATE_HOME"); dir != "" {
 		return dir
 	}
+	if dir := runtimeHomeDir(); dir != "" {
+		return filepath.Join(dir, "state")
+	}
 	return reasonixHomeDir()
 }
 
 func legacyOSSupportDir() string {
+	if runtimeHomeDir() != "" {
+		return ""
+	}
 	dir := osUserConfigDir()
 	if dir == "" {
 		return ""
@@ -149,6 +165,9 @@ func legacyOSSupportDir() string {
 func userCacheDir() string {
 	if dir := cleanEnvDir("REASONIX_CACHE_HOME"); dir != "" {
 		return dir
+	}
+	if dir := runtimeHomeDir(); dir != "" {
+		return filepath.Join(dir, "cache")
 	}
 	dir, err := os.UserCacheDir()
 	if err != nil {
@@ -251,6 +270,15 @@ func LegacyUserConfigPaths() []string {
 // Windows, with a %USERPROFILE%/AppData/Roaming fallback when %APPDATA% is
 // unavailable.
 func ReasonixHomeDir() string { return reasonixHomeDir() }
+
+// RuntimeHomeDir is the optional umbrella root for isolated development runs.
+func RuntimeHomeDir() string { return runtimeHomeDir() }
+
+// SetRuntimeHome sets REASONIX_RUNTIME_HOME for launchers that accept a startup
+// flag. It must run before the first config/path load.
+func SetRuntimeHome(dir string) error {
+	return os.Setenv("REASONIX_RUNTIME_HOME", dir)
+}
 
 // UserCredentialsPath is the reasonix-owned global .env file under Reasonix
 // home. It is the single source for provider credentials saved by Reasonix, so

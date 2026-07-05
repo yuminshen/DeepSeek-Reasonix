@@ -13,7 +13,11 @@ location.
 | Windows | `%APPDATA%\reasonix` |
 
 Set `REASONIX_HOME` to override Reasonix home for tests, CI, or portable
-installations. Normal users should not need it.
+installations. Set `REASONIX_RUNTIME_HOME` or start any UI with
+`--runtime-home DIR` to isolate a whole runtime tree: `<runtime>/home`,
+`<runtime>/state`, and `<runtime>/cache`. The specific `REASONIX_HOME`,
+`REASONIX_STATE_HOME`, and `REASONIX_CACHE_HOME` overrides still win when set.
+Normal users should not need these.
 
 ## What Lives There
 

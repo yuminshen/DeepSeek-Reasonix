@@ -10,7 +10,10 @@
 | Linux | `~/.reasonix` |
 | Windows | `%APPDATA%\reasonix` |
 
-可以设置 `REASONIX_HOME` 覆盖 Reasonix home，主要用于测试、CI 或便携安装。普通用户通常不需要设置。
+可以设置 `REASONIX_HOME` 覆盖 Reasonix home，主要用于测试、CI 或便携安装。设置
+`REASONIX_RUNTIME_HOME`，或在任意运行界面启动时传入 `--runtime-home DIR`，可以隔离
+整棵运行时目录：`<runtime>/home`、`<runtime>/state` 和 `<runtime>/cache`；更精确的
+`REASONIX_HOME`、`REASONIX_STATE_HOME`、`REASONIX_CACHE_HOME` 仍然优先。普通用户通常不需要设置。
 
 ## 目录内容
 

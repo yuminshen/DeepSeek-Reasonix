@@ -36,6 +36,17 @@ func TestWorkspaceStatePath(t *testing.T) {
 
 // --- saveWorkspace / loadWorkspace round-trip ---
 
+func TestDesktopConfigDirUsesStateHome(t *testing.T) {
+	home := isolateDesktopUserDirs(t)
+	state := filepath.Join(home, "state")
+	if got := desktopConfigDir(); filepath.Clean(got) != filepath.Clean(state) {
+		t.Fatalf("desktopConfigDir() = %q, want %q", got, state)
+	}
+	if got := globalWorkspaceRoot(); filepath.Clean(got) != filepath.Join(filepath.Clean(state), "global-workspace") {
+		t.Fatalf("globalWorkspaceRoot() = %q, want under %q", got, state)
+	}
+}
+
 func TestSaveLoadWorkspaceRoundTrip(t *testing.T) {
 	// workspaceStatePath() resolves via os.UserConfigDir() (HOME on unix,
 	// %AppData% on Windows); isolate both so the round-trip exercises real
